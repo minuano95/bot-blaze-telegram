@@ -3,7 +3,7 @@ import json
 import requests
 import logging
 import telebot
-import pandas as pd
+import sqlite3
 from time import sleep
 from datetime import datetime
 # from notifypy import Notify
@@ -11,25 +11,32 @@ from pushbullet import Pushbullet
 
 
 def results():
-    data = pd.read_csv('count.csv')
-    wins = sum(n for n in data.win)
-    losses = sum(n for n in data.loss)
-    prim_tent = sum(n for n in data.prim_tent)
-    prim_gale = sum(n for n in data.prim_gale)
-    seg_gale = sum(n for n in data.seg_gale)
-    white = sum(n for n in data.white)
-    red = sum(n for n in data.red)
-    black = sum(n for n in data.black)
+    conn = sqlite3.connect('count.sql')
+    cursor = conn.cursor()
+    wins = cursor.execute('SELECT SUM(vit) FROM Registros').fetchone()[0]
+    losses = cursor.execute('SELECT SUM(loss) FROM Registros').fetchone()[0]
+    prim_tent = cursor.execute('SELECT SUM(primTent) FROM Registros').fetchone()[0]
+    prim_gale = cursor.execute('SELECT SUM(primGale) FROM Registros').fetchone()[0]
+    seg_gale = cursor.execute('SELECT SUM(segGale) FROM Registros').fetchone()[0]
+    white = cursor.execute('SELECT SUM(branco) FROM Registros').fetchone()[0]
+    black = cursor.execute('SELECT SUM(preto) FROM Registros').fetchone()[0]
+    red = cursor.execute('SELECT SUM(verm) FROM Registros').fetchone()[0]
     porcentagem = round((wins - losses) / wins * 100, 2)
+
+    conn.close()
 
     return {'wins': wins, 'losses': losses, 'prim_tent': prim_tent, 'prim_gale': prim_gale, 'seg_gale': seg_gale, 'white': white, 'black': black,
             'red': red, 'porcentagem': porcentagem}
 
 
 def count(time, win:int, loss:int, prim_tent:int, prim_gale:int, seg_gale:int, white:int, red:int, black:int):
-    with open('count.csv', 'a+') as file:
-        writer = csv.writer(file)
-        writer.writerow([time, win, loss, prim_tent, prim_gale, seg_gale, white, black, red])
+    conn = sqlite3.connect('count.sql')
+    cursor = conn.cursor()
+    string = f'''INSERT INTO Registros (time, vit, loss, primTent, primGale, segGale, branco, preto, verm)
+                VALUES ("{time}", {win}, {loss}, {prim_tent}, {prim_gale}, {seg_gale}, {white}, {black}, {red})'''
+    cursor.execute(string)
+    conn.commit()
+    conn.close()
 
 
 # desktop notification settings
